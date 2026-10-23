@@ -1,17 +1,15 @@
 const express = require("express");
 const helmet = require("helmet");
+const db = require("./database/db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = "127.0.0.1";
 
-// Apply standard HTTP security headers.
 app.use(helmet());
-
-// Accept JSON request bodies with a small size limit.
 app.use(express.json({ limit: "10kb" }));
 
-// Basic health-check endpoint.
+// Verify that the API is running.
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -20,14 +18,34 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Return a consistent JSON response for unknown routes.
+// Verify that the API can query the SQLite database.
+app.get("/api/db/health", (req, res) => {
+  const tables = db
+    .prepare(
+      `
+    SELECT name
+    FROM sqlite_master
+    WHERE type = ? AND name IN (?, ?)
+    ORDER BY name
+  `,
+    )
+    .all("table", "users", "profiles");
+
+  res.status(200).json({
+    status: "ok",
+    database: "connected",
+    tables: tables.map((table) => table.name),
+  });
+});
+
+// Handle unknown routes.
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
   });
 });
 
-// Handle unexpected request errors without exposing internals.
+// Handle unexpected errors.
 app.use((err, req, res, next) => {
   console.error("Request error:", err.message);
 
@@ -40,7 +58,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Keep the development API accessible only from this computer.
+// Listen only on this computer.
 app.listen(PORT, HOST, () => {
   console.log(`API listening at http://${HOST}:${PORT}`);
 });
