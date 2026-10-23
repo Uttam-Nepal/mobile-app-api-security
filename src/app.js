@@ -1,13 +1,18 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const https = require("node:https");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const db = require("./database/db");
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+const HTTP_PORT = Number(process.env.PORT || 3000);
+const HTTPS_PORT = Number(process.env.HTTPS_PORT || 3443);
 const HOST = "127.0.0.1";
 
 // Apply HTTP security headers.
@@ -76,21 +81,18 @@ app.use((err, req, res, next) => {
     return next(err);
   }
 
-  // Invalid JSON syntax.
   if (err.type === "entity.parse.failed") {
     return res.status(400).json({
       error: "Malformed JSON request body.",
     });
   }
 
-  // Reject bodies that exceed the configured size limit.
   if (err.type === "entity.too.large") {
     return res.status(413).json({
       error: "Request body too large.",
     });
   }
 
-  // Log details locally, but do not expose them to the client.
   console.error("Request error:", err.message);
 
   return res.status(500).json({
@@ -98,7 +100,50 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Listen only on this computer.
-app.listen(PORT, HOST, () => {
-  console.log(`API listening at http://${HOST}:${PORT}`);
+// Start HTTP for local comparison.
+app.listen(HTTP_PORT, HOST, () => {
+  console.log(`HTTP API listening at http://${HOST}:${HTTP_PORT}`);
 });
+
+// Start local HTTPS using the self-signed PFX certificate.
+function startHttpsServer() {
+  const pfxPath = path.join(__dirname, "..", "certs", "localhost.pfx");
+  const pfxPassword = process.env.HTTPS_PFX_PASSWORD;
+
+  if (!fs.existsSync(pfxPath)) {
+    console.error("HTTPS not started: local PFX certificate was not found.");
+    return;
+  }
+
+  if (!pfxPassword) {
+    console.error("HTTPS not started: HTTPS_PFX_PASSWORD is not set.");
+    return;
+  }
+
+  try {
+    const pfx = fs.readFileSync(pfxPath);
+
+    const httpsServer = https.createServer(
+      {
+        pfx,
+        passphrase: pfxPassword,
+      },
+      app,
+    );
+
+    httpsServer.on("error", (error) => {
+      console.error("HTTPS server error:", error.message);
+    });
+
+    httpsServer.listen(HTTPS_PORT, HOST, () => {
+      console.log(`HTTPS API listening at https://localhost:${HTTPS_PORT}`);
+    });
+  } catch (error) {
+    console.error(
+      "Could not initialise HTTPS. Check the PFX file and password:",
+      error.message,
+    );
+  }
+}
+
+startHttpsServer();

@@ -25,3 +25,10 @@ desktop.ini
 
 # Editor settings
 .vscode/
+
+# Local TLS certificates and private keys
+certs/
+*.pfx
+*.p12
+*.key
+*.pem
