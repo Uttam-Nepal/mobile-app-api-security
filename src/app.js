@@ -25,7 +25,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Verify the database connection and expected tables.
+// Verify the SQLite connection and expected tables.
 app.get("/api/db/health", (req, res) => {
   const tables = db
     .prepare(
@@ -70,15 +70,30 @@ app.use((req, res) => {
   });
 });
 
-// Handle unexpected errors without exposing internal details.
+// Handle malformed bodies and unexpected errors safely.
 app.use((err, req, res, next) => {
-  console.error("Request error:", err.message);
-
   if (res.headersSent) {
     return next(err);
   }
 
-  res.status(500).json({
+  // Invalid JSON syntax.
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({
+      error: "Malformed JSON request body.",
+    });
+  }
+
+  // Reject bodies that exceed the configured size limit.
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({
+      error: "Request body too large.",
+    });
+  }
+
+  // Log details locally, but do not expose them to the client.
+  console.error("Request error:", err.message);
+
+  return res.status(500).json({
     error: "Internal server error",
   });
 });
