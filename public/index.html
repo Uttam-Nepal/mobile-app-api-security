@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Local mobile application and API security testing lab."
+    />
+    <title>Mobile App &amp; API Security Lab</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: #172033;
+        background: #f3f6fb;
+        font-synthesis: none;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 20px;
+        display: grid;
+        place-items: center;
+      }
+
+      main {
+        width: min(100%, 1000px);
+        margin: auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      h1 {
+        font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+        line-height: 1.2;
+        margin: 0 0 5px;
+      }
+
+      .subtitle {
+        color: #5c667a;
+        margin: 0;
+        font-size: 0.88rem;
+      }
+
+      .lab-badge {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #1d4ed8;
+        background: #dbeafe;
+        border-radius: 999px;
+        padding: 7px 10px;
+      }
+
+      .notice {
+        background: #fff7e5;
+        border: 1px solid #f4d49a;
+        border-left: 4px solid #c17a13;
+        border-radius: 8px;
+        padding: 10px 13px;
+        margin-bottom: 14px;
+        font-size: 0.83rem;
+        line-height: 1.4;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #dce2eb;
+        border-radius: 12px;
+        padding: 17px;
+        box-shadow: 0 2px 5px rgb(20 35 60 / 3%);
+      }
+
+      h2 {
+        font-size: 1rem;
+        margin: 0 0 12px;
+      }
+
+      .field {
+        margin-bottom: 11px;
+      }
+
+      label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        border: 1px solid #b9c3d1;
+        border-radius: 7px;
+        padding: 9px 10px;
+        background: #fff;
+        color: #172033;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      input:focus {
+        outline: 2px solid #93c5fd;
+        outline-offset: 1px;
+        border-color: #2563eb;
+      }
+
+      button {
+        border: 1px solid #c6cfdb;
+        border-radius: 7px;
+        padding: 9px 12px;
+        background: #fff;
+        color: #243047;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.primary {
+        color: #fff;
+        background: #2458c6;
+        border-color: #2458c6;
+      }
+
+      button:hover:not(:disabled) {
+        filter: brightness(0.96);
+      }
+
+      button:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
+      }
+
+      button:disabled {
+        color: #929aaa;
+        background: #edf0f4;
+        cursor: not-allowed;
+      }
+
+      .session-status {
+        font-size: 0.88rem;
+        margin: 0 0 8px;
+        overflow-wrap: anywhere;
+      }
+
+      .storage-status {
+        font-size: 0.8rem;
+        color: #79551a;
+        background: #fff7e5;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin: 10px 0 0;
+        overflow-wrap: anywhere;
+      }
+
+      .result-card {
+        flex: 1;
+        min-height: 135px;
+      }
+
+      .result-meta {
+        color: #69758a;
+        font-size: 0.78rem;
+        margin: -5px 0 10px;
+      }
+
+      #result {
+        margin: 0;
+        padding: 11px;
+        min-height: 62px;
+        max-height: 190px;
+        overflow: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        border: 1px solid #e1e6ee;
+        border-radius: 7px;
+        background: #f7f9fc;
+        color: #263248;
+        font-family: Consolas, monospace;
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+
+      footer {
+        margin-top: 12px;
+        font-size: 0.75rem;
+        color: #748096;
+        text-align: center;
+      }
+
+      @media (max-width: 650px) {
+        body {
+          padding: 14px;
+          display: block;
+        }
+
+        header {
+          align-items: flex-start;
+        }
+
+        .lab-badge {
+          font-size: 0.68rem;
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .card {
+          padding: 14px;
+        }
+
+        .result-card {
+          min-height: auto;
+        }
+      }
+
+      @media (max-height: 700px) and (min-width: 651px) {
+        body {
+          padding: 12px;
+        }
+
+        .card {
+          padding: 13px;
+        }
+
+        .layout,
+        .column {
+          gap: 10px;
+        }
+
+        .notice {
+          margin-bottom: 10px;
+          padding: 8px 11px;
+        }
+
+        .field {
+          margin-bottom: 8px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Mobile App &amp; API Security Lab</h1>
+          <p class="subtitle">
+            Local prototype · Authentication · Profile protection
+          </p>
+        </div>
+        <span class="lab-badge">LOCAL TEST LAB</span>
+      </header>
+
+      <div class="notice">
+        <strong>Improved token handling:</strong>
+        This version uses an HttpOnly, Secure, SameSite=Strict cookie. Page
+        JavaScript cannot read the access-token value. Local testing only; the
+        self-signed TLS certificate is not trusted for production.
+      </div>
+
+      <div class="layout">
+        <div class="column">
+          <section class="card">
+            <h2>Sign in</h2>
+
+            <form id="login-form">
+              <div class="field">
+                <label for="email">Test account email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="sijan@example.test"
+                  autocomplete="username"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="password">Test account password</label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+
+              <button class="primary" type="submit">Sign in</button>
+            </form>
+          </section>
+
+          <section class="card">
+            <h2>Test accounts</h2>
+            <p class="session-status">Sijan · sijan@example.test</p>
+            <p class="session-status">Uttam · uttam@example.test</p>
+            <p class="result-meta">
+              Fictional accounts created for local testing.
+            </p>
+          </section>
+        </div>
+
+        <div class="column">
+          <section class="card">
+            <h2>Profile test</h2>
+            <p id="session-status" class="session-status">
+              No active test session.
+            </p>
+
+            <button id="profile-button" class="primary" type="button" disabled>
+              Load my profile
+            </button>
+
+            <button id="clear-button" type="button">
+              Sign out / clear session
+            </button>
+
+            <p id="storage-status" class="storage-status" aria-live="polite">
+              Token storage status: checking...
+            </p>
+          </section>
+
+          <section class="card result-card">
+            <h2>Test result</h2>
+            <p class="result-meta">The latest API response appears below.</p>
+            <pre id="result" aria-live="polite">No test run yet.</pre>
+          </section>
+        </div>
+      </div>
+
+      <footer>
+        Educational prototype · Local API · Fictional data · Defensive testing
+        only
+      </footer>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -9,15 +9,8 @@ function authenticate(req, res, next) {
     });
   }
 
-  const authorization = req.get("Authorization");
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return res.status(401).json({
-      error: "Authentication required.",
-    });
-  }
-
-  const token = authorization.slice("Bearer ".length).trim();
+  // The access token now comes from an HttpOnly cookie.
+  const token = req.cookies?.access_token;
 
   if (!token) {
     return res.status(401).json({
@@ -40,8 +33,7 @@ function authenticate(req, res, next) {
       });
     }
 
-    // Use the verified identity from the token, not a
-    // user ID supplied by the request.
+    // Use the identity from the verified token.
     req.auth = { userId };
 
     return next();

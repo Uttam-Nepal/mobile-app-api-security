@@ -5,11 +5,18 @@ const db = require("../database/db");
 
 const router = express.Router();
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "strict",
+  path: "/api",
+  maxAge: 15 * 60 * 1000,
+};
+
 router.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
 
-    // Validate the request before querying the database.
     if (
       typeof email !== "string" ||
       typeof password !== "string" ||
@@ -23,7 +30,6 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    // The JWT secret must be supplied through the environment.
     const secret = process.env.JWT_SECRET;
 
     if (!secret || secret.length < 32) {
@@ -44,8 +50,6 @@ router.post("/login", async (req, res, next) => {
       )
       .get(normalizedEmail);
 
-    // Use the same authentication error for unknown users and
-    // incorrect passwords to avoid revealing which accounts exist.
     const passwordMatches = user
       ? await bcrypt.compare(password, user.password_hash)
       : false;
@@ -56,7 +60,6 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    // The token contains only the user's identifier.
     const token = jwt.sign({}, secret, {
       subject: String(user.id),
       algorithm: "HS256",
@@ -65,11 +68,14 @@ router.post("/login", async (req, res, next) => {
       audience: "mobile-app-client",
     });
 
+    // Send the token as a cookie instead of returning it
+    // in JSON or storing it in JavaScript-readable localStorage.
+    res.cookie("access_token", token, cookieOptions);
+
     return res.status(200).json({
       message: "Login successful.",
-      token_type: "Bearer",
+      auth_method: "HttpOnly cookie",
       expires_in: 900,
-      access_token: token,
       user: {
         id: user.id,
         display_name: user.display_name,
@@ -78,6 +84,19 @@ router.post("/login", async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+});
+
+router.post("/logout", (req, res) => {
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    path: "/api",
+  });
+
+  return res.status(200).json({
+    message: "Logout successful.",
+  });
 });
 
 module.exports = router;

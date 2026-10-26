@@ -1,6 +1,7 @@
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 const https = require("node:https");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -15,13 +16,13 @@ const HTTP_PORT = Number(process.env.PORT || 3000);
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 3443);
 const HOST = "127.0.0.1";
 
-// Apply HTTP security headers.
 app.use(helmet());
-
-// Accept JSON request bodies with a size limit.
 app.use(express.json({ limit: "10kb" }));
 
-// Basic API health check.
+// Parse cookies before protected routes inspect them.
+app.use(cookieParser());
+
+// API health check.
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -30,7 +31,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Verify the SQLite connection and expected tables.
+// Database health check.
 app.get("/api/db/health", (req, res) => {
   const tables = db
     .prepare(
@@ -62,11 +63,12 @@ const loginLimiter = rateLimit({
   },
 });
 
-// Authentication endpoints.
+// Authentication and protected profile endpoints.
 app.use("/api/auth", loginLimiter, authRoutes);
-
-// Protected profile endpoints.
 app.use("/api/profiles", profileRoutes);
+
+// Serve the local test interface and public/app.js.
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Return JSON for unknown routes.
 app.use((req, res) => {
@@ -75,7 +77,7 @@ app.use((req, res) => {
   });
 });
 
-// Handle malformed bodies and unexpected errors safely.
+// Handle malformed request bodies and unexpected errors.
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
@@ -105,7 +107,7 @@ app.listen(HTTP_PORT, HOST, () => {
   console.log(`HTTP API listening at http://${HOST}:${HTTP_PORT}`);
 });
 
-// Start local HTTPS using the self-signed PFX certificate.
+// Start HTTPS using the local development certificate.
 function startHttpsServer() {
   const pfxPath = path.join(__dirname, "..", "certs", "localhost.pfx");
   const pfxPassword = process.env.HTTPS_PFX_PASSWORD;
@@ -123,7 +125,7 @@ function startHttpsServer() {
   try {
     const pfx = fs.readFileSync(pfxPath);
 
-    const httpsServer = https.createServer(
+    const server = https.createServer(
       {
         pfx,
         passphrase: pfxPassword,
@@ -131,11 +133,11 @@ function startHttpsServer() {
       app,
     );
 
-    httpsServer.on("error", (error) => {
+    server.on("error", (error) => {
       console.error("HTTPS server error:", error.message);
     });
 
-    httpsServer.listen(HTTPS_PORT, HOST, () => {
+    server.listen(HTTPS_PORT, HOST, () => {
       console.log(`HTTPS API listening at https://localhost:${HTTPS_PORT}`);
     });
   } catch (error) {
