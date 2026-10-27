@@ -69,3 +69,23 @@ expiry and logout behaviour.
 - `httponly-cookie-attributes.png`
 - `httponly-javascript-access-check.png`
 - `httponly-cookie-profile-uttam.png`
+
+## Logout and Session Clearing
+
+### Procedure
+
+1. Sign in through the HTTPS application.
+2. Select "Sign out / clear session".
+3. Inspect the browser cookie table.
+4. Request a protected profile without an authentication cookie.
+
+### Actual Results
+
+- The access-token cookie was no longer present.
+- The profile request returned HTTP 401 Unauthorized.
+- The API response was `Authentication required.`
+
+### Conclusion
+
+The logout flow cleared the cookie, and the protected profile
+endpoint rejected the subsequent request without authentication.
